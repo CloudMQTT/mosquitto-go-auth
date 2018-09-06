@@ -71,9 +71,6 @@ func NewHTTP(authOpts map[string]string, logLevel log.Level) (HTTP, error) {
 
 	if superuserUri, ok := authOpts["http_superuser_uri"]; ok {
 		http.SuperuserUri = superuserUri
-	} else {
-		httpOk = false
-		missingOpts += " http_superuser_uri"
 	}
 
 	if aclUri, ok := authOpts["http_aclcheck_uri"]; ok {
@@ -129,6 +126,10 @@ func (o HTTP) GetUser(username, password string) bool {
 }
 
 func (o HTTP) GetSuperuser(username string) bool {
+
+	if len(o.SuperuserUri) == 0 {
+		return false
+	}
 
 	var dataMap = map[string]interface{}{
 		"username": username,
