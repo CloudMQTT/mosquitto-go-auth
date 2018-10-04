@@ -586,9 +586,9 @@ func CheckAuthCache(username, password string) (bool, bool) {
 	if err != nil {
 		return false, false
 	}
-	//refresh expiration
-	commonData.RedisCache.Expire(pair, time.Duration(commonData.AuthCacheSeconds)*time.Second)
 	if val == "true" {
+		//refresh expiration
+		commonData.RedisCache.Expire(pair, time.Duration(commonData.AuthCacheSeconds)*time.Second)
 		return true, true
 	}
 	return true, false
@@ -612,9 +612,9 @@ func CheckAclCache(username, topic, clientid string, acc int) (bool, bool) {
 	if err != nil {
 		return false, false
 	}
-	//refresh expiration
-	commonData.RedisCache.Expire(pair, time.Duration(commonData.AclCacheSeconds)*time.Second)
 	if val == "true" {
+		//refresh expiration
+		commonData.RedisCache.Expire(pair, time.Duration(commonData.AclCacheSeconds)*time.Second)
 		return true, true
 	}
 	return true, false
