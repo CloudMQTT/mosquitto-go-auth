@@ -10,6 +10,27 @@
 #endif
 #include "go-auth.h"
 
+void log_info(const char * str) {
+	GoString gstr = {str, strlen(str)};
+	AuthLogInfo(gstr);
+}
+
+void log_debug(const char * str) {
+	GoString gstr = {str, strlen(str)};
+	AuthLogDebug(gstr);
+}
+
+void log_warn(const char * str) {
+	GoString gstr = {str, strlen(str)};
+	AuthLogWarn(gstr);
+}
+
+void log_error(const char * str) {
+	GoString gstr = {str, strlen(str)};
+	AuthLogError(gstr);
+}
+
+
 int mosquitto_auth_plugin_version(void) {
   return MOSQ_AUTH_PLUGIN_VERSION;
 }
@@ -79,8 +100,7 @@ int mosquitto_auth_unpwd_check(void *user_data, const char *username, const char
 #endif
   
   if (username == NULL || password == NULL) {
-    printf("error: received null username or password for unpwd check\n");
-    fflush(stdout);
+    log_debug("received null username or password for unpwd check");
     return MOSQ_ERR_AUTH;
   }
 
@@ -105,25 +125,24 @@ int mosquitto_auth_acl_check(void *user_data, const char *clientid, const char *
 	const char* topic = msg->topic;
 #endif
   if(clientid == NULL) {
-    printf("error: clientid is null\n");
+    log_debug("clientid is null\n");
   } 
 
   if(username == NULL) {
-    printf("error: username is null\n");
+    log_debug("username is null\n");
   }
 
   if(topic == NULL) {
-    printf("error: topic is null\n");
+    log_debug("topic is null\n");
   }
 
   if(access < 1) {
-    printf("error: access is 0 or negative\n");
+    log_debug("access is 0 or negative\n");
   }
 
 
   if (clientid == NULL || username == NULL || topic == NULL || access < 1) {
-    printf("error: received null username, clientid or topic, or access is equal or less than 0 for acl check\n");
-    fflush(stdout);
+    log_debug("received null username, clientid or topic, or access is equal or less than 0 for acl check\n");
     return MOSQ_ERR_ACL_DENIED;
   }
   

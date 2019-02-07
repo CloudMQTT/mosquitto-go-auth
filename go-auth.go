@@ -728,4 +728,25 @@ func AuthPluginCleanup() {
 	}
 }
 
+//export AuthLogInfo
+func AuthLogInfo(message string) {
+	log.Info(message)
+}
+
+//export AuthLogWarn
+func AuthLogWarn(message string) {
+	log.Warn(message)
+}
+
+//export AuthLogError
+func AuthLogError(message string) {
+	log.Warn(message)
+}
+
+//export AuthLogDebug
+func AuthLogDebug(message string) {
+	log.Warn(message)
+}
+
 func main() {}
+
