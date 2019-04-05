@@ -5,17 +5,18 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
+	"golang.org/x/crypto/bcrypt"
 	"encoding/base64"
 	"fmt"
 	"log"
 	"strconv"
 	"strings"
 	"time"
-
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/jmoiron/sqlx"
+	log "github.com/sirupsen/logrus"
 )
 
 // OpenDatabase opens the database and performs a ping to make sure the
@@ -126,13 +127,23 @@ func hashWithSalt(password string, salt []byte, iterations int, algorithm string
 // Taken from brocaar's lora-app-server: https://github.com/brocaar/lora-app-server
 func HashCompare(password string, passwordHash string) bool {
 	// SPlit the hash string into its parts.
-	hashSplit := strings.Split(passwordHash, "$")
+	log.TraceF("HashCompare passwordHash=%s", passwordHash)
+	hashSplit := strings.SplitN(passwordHash, "$", 2)
 
+	var hashedPassword string
 	// Get the iterations and the salt and use them to encode the password
 	// being compared.cre
-	iterations, _ := strconv.Atoi(hashSplit[2])
-	salt, _ := base64.StdEncoding.DecodeString(hashSplit[3])
-	algorithm := hashSplit[1]
-	newHash := hashWithSalt(password, salt, iterations, algorithm)
+	function := hashSplit[0]
+	switch function {
+	case "PBKDF2":
+		pbkdSplit := strings.Split(hashSplit[1], "$")
+		iterations, _ := strconv.Atoi(pbkdSplit[1])
+		salt, _ := base64.StdEncoding.DecodeString(pbkdSplit[2])
+		algorithm := pbkdSplit[0]
+		hashedPassword = hashWithSalt(password, salt, iterations, algorithm)
+	case "BCRYPT":
+		log.TraceF("HashCompare::BCRYPT	hashSplit[1]=%s", hashSplit[1])
+		return bcrypt.CompareHashAndPassword(hashSplit[1], []byte(password))
+	}
 	return newHash == passwordHash
 }

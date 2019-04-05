@@ -85,6 +85,7 @@ func (o Redis) GetUser(username, password string) bool {
 		return false
 	}
 
+	log.TraceF("user=%s hash=%s\n", username, pwHash)
 	if common.HashCompare(password, pwHash) {
 		return true
 	}

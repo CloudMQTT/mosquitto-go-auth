@@ -45,6 +45,7 @@ type CommonData struct {
 	CheckPrefix      bool
 	Prefixes         map[string]string
 	LogLevel         log.Level
+	EnableSuperusers  bool
 }
 
 //Cache stores necessary values for Redis cache
@@ -99,6 +100,7 @@ func AuthPluginInit(keys []string, values []string, authOptsNum int) {
 		CheckPrefix:      false,
 		Prefixes:         make(map[string]string),
 		LogLevel:         log.InfoLevel,
+		EnableSuperusers:		true,
 	}
 
 	//First, get backends
@@ -120,6 +122,10 @@ func AuthPluginInit(keys []string, values []string, authOptsNum int) {
 		} else {
 			authOpts[keys[i]] = values[i]
 		}
+	}
+
+	if enableSuperusers, ok := authOpts["enable_superusers"]; ok {
+		commonData.EnableSuperusers = enableSuperusers == "true"
 	}
 
 	//Log and end program if backends are wrong
@@ -208,16 +214,17 @@ func AuthPluginInit(keys []string, values []string, authOptsNum int) {
 					continue
 				}
 
-				plGetSuperuser, psErr := commonData.Plugin.Lookup("GetSuperuser")
+				if commonData.EnableSuperusers {
+					plGetSuperuser, psErr := commonData.Plugin.Lookup("GetSuperuser")
 
-				if psErr != nil {
-					log.Errorf("Couldn't find func GetSuperuser in plugin: %s", psErr)
-					commonData.Plugin = nil
-					continue
+					if psErr != nil {
+						log.Errorf("Couldn't find func GetSuperuser in plugin: %s", psErr)
+						commonData.Plugin = nil
+						continue
+					}
+					getSuperuserFunc := plGetSuperuser.(func(username string) bool)
+					commonData.PGetSuperuser = getSuperuserFunc
 				}
-
-				getSuperuserFunc := plGetSuperuser.(func(username string) bool)
-				commonData.PGetSuperuser = getSuperuserFunc
 
 				plCheckAcl, pcErr := commonData.Plugin.Lookup("CheckAcl")
 
@@ -505,10 +512,12 @@ func AuthAclCheck(clientid, username, topic string, acc int) bool {
 
 				var backend = commonData.Backends[bename]
 
-				log.Debugf("Superuser check with backend %s", backend.GetName())
-				if backend.GetSuperuser(username) {
-					log.Debugf("superuser %s acl authenticated with backend %s", username, backend.GetName())
-					aclCheck = true
+				if commonData.EnableSuperusers {
+					log.Debugf("Superuser check with backend %s", backend.GetName())
+					if backend.GetSuperuser(username) {
+						log.Debugf("superuser %s acl authenticated with backend %s", username, backend.GetName())
+						aclCheck = true
+					}
 				}
 
 				//If not superuser, check acl.
