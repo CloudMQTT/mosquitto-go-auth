@@ -294,3 +294,5 @@ func (o Mysql) Halt() {
 		}
 	}
 }
+
+func (o Mysql) Reload() {}

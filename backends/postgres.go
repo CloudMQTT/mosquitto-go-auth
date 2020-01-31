@@ -241,3 +241,5 @@ func (o Postgres) Halt() {
 		}
 	}
 }
+
+func (o Postgres) Reload() {}

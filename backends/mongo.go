@@ -210,3 +210,5 @@ func (o Mongo) Halt() {
 		o.Conn.Disconnect(context.TODO())
 	}
 }
+
+func (o Mongo) Reload() {}

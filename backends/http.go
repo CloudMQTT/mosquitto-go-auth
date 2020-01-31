@@ -233,7 +233,7 @@ func httpRequest(host, uri, username string, withTLS, verifyPeer bool, dataMap m
 
 		//For test response, we expect "ok" or an error message.
 		if string(body) != "ok" {
-			log.Infof("api error: %s\n", string(body))
+			log.Warnf("api error: %s\n", string(body))
 			return false
 		}
 
@@ -244,12 +244,12 @@ func httpRequest(host, uri, username string, withTLS, verifyPeer bool, dataMap m
 		jErr := json.Unmarshal(body, &response)
 
 		if jErr != nil {
-			log.Errorf("unmarshal error: %v\n", jErr)
+			log.Warnf("unmarshal error: %v\n", jErr)
 			return false
 		}
 
 		if !response.Ok {
-			log.Infof("api error: %s\n", response.Error)
+			log.Warnf("api error: %s\n", response.Error)
 			return false
 		}
 
@@ -269,3 +269,5 @@ func (o HTTP) GetName() string {
 func (o HTTP) Halt() {
 	//Do nothing
 }
+
+func (o HTTP) Reload() {}

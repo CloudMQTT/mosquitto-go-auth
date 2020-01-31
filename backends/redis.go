@@ -233,3 +233,5 @@ func (o Redis) Halt() {
 		}
 	}
 }
+
+func (o Redis) Reload() {}

@@ -90,8 +90,9 @@ func NewFiles(authOpts map[string]string, logLevel log.Level) (Files, error) {
 }
 
 //ReadPasswords read file and populates FileUsers. Return amount of users seen and possile error.
-func (o Files) readPasswords() (int, error) {
+func (o *Files) readPasswords() (int, error) {
 
+	users := make(map[string]*FileUser)
 	usersCount := 0
 
 	file, fErr := os.Open(o.PasswordPath)
@@ -120,7 +121,7 @@ func (o Files) readPasswords() (int, error) {
 		//Create user if it doesn't exist and save password; override password if user existed.
 		var fileUser *FileUser
 		var ok bool
-		fileUser, ok = o.Users[lineArr[0]]
+		fileUser, ok = users[lineArr[0]]
 		if ok {
 			fileUser.Password = lineArr[1]
 		} else {
@@ -129,8 +130,13 @@ func (o Files) readPasswords() (int, error) {
 				Password:   lineArr[1],
 				AclRecords: make([]AclRecord, 0, 0),
 			}
-			o.Users[lineArr[0]] = fileUser
+			users[lineArr[0]] = fileUser
 		}
+	}
+	o.Users = users
+	log.Debugf("users from file: ")
+	for k := range o.Users {
+		log.Debugf(" %s", k)
 	}
 
 	return usersCount, nil
@@ -139,7 +145,7 @@ func (o Files) readPasswords() (int, error) {
 
 //ReadAcls reads the Acl file and associates them to existing users. It omits any non existing users.
 func (o *Files) readAcls() (int, error) {
-
+	aclRecords := make([]AclRecord, 0, 0)
 	linesCount := 0
 
 	//Set currentUser as empty string
@@ -219,7 +225,7 @@ func (o *Files) readAcls() (int, error) {
 					fUser, _ := o.Users[currentUser]
 					fUser.AclRecords = append(fUser.AclRecords, aclRecord)
 				} else {
-					o.AclRecords = append(o.AclRecords, aclRecord)
+					aclRecords = append(aclRecords, aclRecord)
 				}
 
 				linesCount++
@@ -260,7 +266,7 @@ func (o *Files) readAcls() (int, error) {
 				}
 
 				//Append to general acls.
-				o.AclRecords = append(o.AclRecords, aclRecord)
+				aclRecords = append(aclRecords, aclRecord)
 
 				linesCount++
 
@@ -270,7 +276,7 @@ func (o *Files) readAcls() (int, error) {
 
 		}
 	}
-
+	o.AclRecords = aclRecords
 	return linesCount, nil
 
 }
@@ -294,7 +300,7 @@ func (o Files) GetUser(username, password string) bool {
 		return true
 	}
 
-	log.Warnf("wrong password for user %s\n", username)
+	log.Infof("[files] wrong password for user %s\n", username)
 
 	return false
 
@@ -343,4 +349,11 @@ func (o Files) GetName() string {
 //Halt does nothing for files as there's no cleanup needed.
 func (o Files) Halt() {
 	//Do nothing
+}
+
+func (o Files) Reload() {
+	log.Info("Read passwords")
+	o.readPasswords()
+	log.Info("Read acls")
+	o.readAcls()
 }

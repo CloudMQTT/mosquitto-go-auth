@@ -498,3 +498,5 @@ func (o JWT) Halt() {
 		}
 	}
 }
+
+func (o JWT) Reload() {}

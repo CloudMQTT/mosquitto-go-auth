@@ -38,26 +38,19 @@ void log_error(const char * str) {
 int mosquitto_auth_plugin_version(void) {
   return MOSQ_AUTH_PLUGIN_VERSION;
 }
-#if MOSQ_AUTH_PLUGIN_VERSION == 3
-int mosquitto_auth_plugin_init(void **user_data, struct mosquitto_opt *auth_opts, int auth_opt_count) {
-#else
+
 int mosquitto_auth_plugin_init(void **user_data, struct mosquitto_auth_opt *auth_opts, int auth_opt_count) {
-#endif
   /*
     Pass auth_opts hash as keys and values char* arrays to Go in order to initialize them there.
   */
 
   GoInt32 opts_count = auth_opt_count;
-  
+
   GoString keys[auth_opt_count];
   GoString values[auth_opt_count];
   int i;
 
-#if MOSQ_AUTH_PLUGIN_VERSION == 3
-  struct mosquitto_opt *o;
-#else
 	struct mosquitto_auth_opt *o;
-#endif
   for (i = 0, o = auth_opts; i < auth_opt_count; i++, o++) {
     GoString opt_key = {o->key, strlen(o->key)};
     GoString opt_value = {o->value, strlen(o->value)};
@@ -72,28 +65,19 @@ int mosquitto_auth_plugin_init(void **user_data, struct mosquitto_auth_opt *auth
   return MOSQ_ERR_SUCCESS;
 }
 
-#if MOSQ_AUTH_PLUGIN_VERSION == 3
-int mosquitto_auth_plugin_cleanup(void *user_data, struct mosquitto_opt *auth_opts, int auth_opt_count) {
-#else
 int mosquitto_auth_plugin_cleanup(void *user_data, struct mosquitto_auth_opt *auth_opts, int auth_opt_count) {
-#endif
   AuthPluginCleanup();
   return MOSQ_ERR_SUCCESS;
 }
 
-#if MOSQ_AUTH_PLUGIN_VERSION == 3
-int mosquitto_auth_security_init(void *user_data, struct mosquitto_opt *auth_opts, int auth_opt_count, bool reload) {
-#else
 int mosquitto_auth_security_init(void *user_data, struct mosquitto_auth_opt *auth_opts, int auth_opt_count, bool reload) {
-#endif
+  if (reload) {
+    AuthReload();
+  }
   return MOSQ_ERR_SUCCESS;
 }
 
-#if MOSQ_AUTH_PLUGIN_VERSION == 3
-int mosquitto_auth_security_cleanup(void *user_data, struct mosquitto_opt *auth_opts, int auth_opt_count, bool reload) {
-#else
 int mosquitto_auth_security_cleanup(void *user_data, struct mosquitto_auth_opt *auth_opts, int auth_opt_count, bool reload) {
-#endif
   return MOSQ_ERR_SUCCESS;
 }
 

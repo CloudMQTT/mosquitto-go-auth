@@ -175,3 +175,5 @@ func (o Sqlite) Halt() {
 		}
 	}
 }
+
+func (o Sqlite) Reload() {}
