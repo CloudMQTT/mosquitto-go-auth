@@ -5,6 +5,7 @@
 
 #include <mosquitto.h>
 #include <mosquitto_plugin.h>
+
 #if MOSQ_AUTH_PLUGIN_VERSION >= 3
 # include <mosquitto_broker.h>
 #endif
@@ -14,11 +15,34 @@
 # define mosquitto_auth_opt mosquitto_opt
 #endif
 
+void log_info(const char * str) {
+	GoString gstr = {str, strlen(str)};
+	AuthLogInfo(gstr);
+}
+
+void log_debug(const char * str) {
+	GoString gstr = {str, strlen(str)};
+	AuthLogDebug(gstr);
+}
+
+void log_warn(const char * str) {
+	GoString gstr = {str, strlen(str)};
+	AuthLogWarn(gstr);
+}
+
+void log_error(const char * str) {
+	GoString gstr = {str, strlen(str)};
+	AuthLogError(gstr);
+}
+
 int mosquitto_auth_plugin_version(void) {
   return MOSQ_AUTH_PLUGIN_VERSION;
 }
-
+#if MOSQ_AUTH_PLUGIN_VERSION == 3
+int mosquitto_auth_plugin_init(void **user_data, struct mosquitto_opt *auth_opts, int auth_opt_count) {
+#else
 int mosquitto_auth_plugin_init(void **user_data, struct mosquitto_auth_opt *auth_opts, int auth_opt_count) {
+#endif
   /*
     Pass auth_opts hash as keys and values char* arrays to Go in order to initialize them there.
   */
@@ -28,7 +52,12 @@ int mosquitto_auth_plugin_init(void **user_data, struct mosquitto_auth_opt *auth
   GoString keys[auth_opt_count];
   GoString values[auth_opt_count];
   int i;
-  struct mosquitto_auth_opt *o;
+
+#if MOSQ_AUTH_PLUGIN_VERSION == 3
+  struct mosquitto_opt *o;
+#else
+	struct mosquitto_auth_opt *o;
+#endif
   for (i = 0, o = auth_opts; i < auth_opt_count; i++, o++) {
     GoString opt_key = {o->key, strlen(o->key)};
     GoString opt_value = {o->value, strlen(o->value)};
@@ -43,16 +72,28 @@ int mosquitto_auth_plugin_init(void **user_data, struct mosquitto_auth_opt *auth
   return MOSQ_ERR_SUCCESS;
 }
 
+#if MOSQ_AUTH_PLUGIN_VERSION == 3
+int mosquitto_auth_plugin_cleanup(void *user_data, struct mosquitto_opt *auth_opts, int auth_opt_count) {
+#else
 int mosquitto_auth_plugin_cleanup(void *user_data, struct mosquitto_auth_opt *auth_opts, int auth_opt_count) {
+#endif
   AuthPluginCleanup();
   return MOSQ_ERR_SUCCESS;
 }
 
+#if MOSQ_AUTH_PLUGIN_VERSION == 3
+int mosquitto_auth_security_init(void *user_data, struct mosquitto_opt *auth_opts, int auth_opt_count, bool reload) {
+#else
 int mosquitto_auth_security_init(void *user_data, struct mosquitto_auth_opt *auth_opts, int auth_opt_count, bool reload) {
+#endif
   return MOSQ_ERR_SUCCESS;
 }
 
+#if MOSQ_AUTH_PLUGIN_VERSION == 3
+int mosquitto_auth_security_cleanup(void *user_data, struct mosquitto_opt *auth_opts, int auth_opt_count, bool reload) {
+#else
 int mosquitto_auth_security_cleanup(void *user_data, struct mosquitto_auth_opt *auth_opts, int auth_opt_count, bool reload) {
+#endif
   return MOSQ_ERR_SUCCESS;
 }
 
@@ -65,8 +106,7 @@ int mosquitto_auth_unpwd_check(void *userdata, const char *username, const char 
 #endif
 {
   if (username == NULL || password == NULL) {
-    printf("error: received null username or password for unpwd check\n");
-    fflush(stdout);
+    log_debug("received null username or password for unpwd check");
     return MOSQ_ERR_AUTH;
   }
 
@@ -93,9 +133,24 @@ int mosquitto_auth_acl_check(void *userdata, const char *clientid, const char *u
     const char* username = mosquitto_client_username(client);
     const char* topic = msg->topic;
   #endif
+  if(clientid == NULL) {
+    log_debug("clientid is null\n");
+  } 
+
+  if(username == NULL) {
+    log_debug("username is null\n");
+  }
+
+  if(topic == NULL) {
+    log_debug("topic is null\n");
+  }
+
+  if(access < 1) {
+    log_debug("access is 0 or negative\n");
+  }
+
   if (clientid == NULL || username == NULL || topic == NULL || access < 1) {
-    printf("error: received null username, clientid or topic, or access is equal or less than 0 for acl check\n");
-    fflush(stdout);
+    log_debug("received null username, clientid or topic, or access is equal or less than 0 for acl check\n");
     return MOSQ_ERR_ACL_DENIED;
   }
 
