@@ -21,8 +21,7 @@ var HashIterations = 100000
 
 //FileUer keeps a user password and acl records.
 type FileUser struct {
-	Password   string
-	AclRecords []AclRecord
+	Password string
 }
 
 //AclRecord holds a topic and access privileges.
@@ -33,11 +32,12 @@ type AclRecord struct {
 
 //FileBE holds paths to files, list of file users and general (no user or pattern) acl records.
 type Files struct {
-	PasswordPath string
-	AclPath      string
-	CheckAcls    bool
-	Users        map[string]*FileUser //Users keeps a registry of username/FileUser pairs, holding a user's password and Acl records.
-	AclRecords   []AclRecord
+	PasswordPath   string
+	AclPath        string
+	CheckAcls      bool
+	Users          map[string]*FileUser //Users keeps a registry of username/FileUser pairs, holding a user's password and Acl records.
+	UserAclRecords map[string][]AclRecord
+	AclRecords     []AclRecord
 }
 
 //NewFiles initializes a files backend.
@@ -46,11 +46,12 @@ func NewFiles(authOpts map[string]string, logLevel log.Level) (Files, error) {
 	log.SetLevel(logLevel)
 
 	var files = Files{
-		PasswordPath: "",
-		AclPath:      "",
-		CheckAcls:    false,
-		Users:        make(map[string]*FileUser),
-		AclRecords:   make([]AclRecord, 0, 0),
+		PasswordPath:   "",
+		AclPath:        "",
+		CheckAcls:      false,
+		Users:          make(map[string]*FileUser),
+		UserAclRecords: make(map[string][]AclRecord),
+		AclRecords:     make([]AclRecord, 0, 0),
 	}
 
 	if passwordPath, ok := authOpts["password_path"]; ok {
@@ -127,8 +128,7 @@ func (o *Files) readPasswords() (int, error) {
 		} else {
 			usersCount++
 			fileUser = &FileUser{
-				Password:   lineArr[1],
-				AclRecords: make([]AclRecord, 0, 0),
+				Password: lineArr[1],
 			}
 			users[lineArr[0]] = fileUser
 		}
@@ -146,6 +146,7 @@ func (o *Files) readPasswords() (int, error) {
 //ReadAcls reads the Acl file and associates them to existing users. It omits any non existing users.
 func (o *Files) readAcls() (int, error) {
 	aclRecords := make([]AclRecord, 0, 0)
+	userAclRecords := make(map[string][]AclRecord)
 	linesCount := 0
 
 	//Set currentUser as empty string
@@ -222,8 +223,11 @@ func (o *Files) readAcls() (int, error) {
 
 				//Append to user or general depending on currentUser.
 				if currentUser != "" {
-					fUser, _ := o.Users[currentUser]
-					fUser.AclRecords = append(fUser.AclRecords, aclRecord)
+					//					userRecords, ok := userAclRecords[currentUser]
+					//					if !ok {
+					//						userRecords = make([]AclRecord, 0, 0)
+					//					}
+					userAclRecords[currentUser] = append(userAclRecords[currentUser], aclRecord)
 				} else {
 					aclRecords = append(aclRecords, aclRecord)
 				}
@@ -276,6 +280,7 @@ func (o *Files) readAcls() (int, error) {
 
 		}
 	}
+	o.UserAclRecords = userAclRecords
 	o.AclRecords = aclRecords
 	return linesCount, nil
 
@@ -318,11 +323,12 @@ func (o Files) CheckAcl(username, topic, clientid string, acc int32) bool {
 		return true
 	}
 
-	fileUser, ok := o.Users[username]
+	fileUserRecords, ok := o.UserAclRecords[username]
 
 	//If user exists, check against his acls and common ones. If not, check against common acls only.
 	if ok {
-		for _, aclRecord := range fileUser.AclRecords {
+		for _, aclRecord := range fileUserRecords {
+			log.Debugf("fileUserRecord = %s", aclRecord.Topic)
 			if common.TopicsMatch(aclRecord.Topic, topic) && (acc == int32(aclRecord.Acc) || int32(aclRecord.Acc) == MOSQ_ACL_READWRITE || (acc == MOSQ_ACL_SUBSCRIBE && topic != "#" && (int32(aclRecord.Acc) == MOSQ_ACL_READ || int32(aclRecord.Acc) == MOSQ_ACL_SUBSCRIBE))) {
 				return true
 			}
@@ -332,6 +338,7 @@ func (o Files) CheckAcl(username, topic, clientid string, acc int32) bool {
 		//Replace all occurrences of %c for clientid and %u for username
 		aclTopic := strings.Replace(aclRecord.Topic, "%c", clientid, -1)
 		aclTopic = strings.Replace(aclTopic, "%u", username, -1)
+		log.Debugf("acltopic = %s (%s)", aclTopic, aclRecord.Topic)
 		if common.TopicsMatch(aclTopic, topic) && (acc == int32(aclRecord.Acc) || int32(aclRecord.Acc) == MOSQ_ACL_READWRITE || (acc == MOSQ_ACL_SUBSCRIBE && topic != "#" && (int32(aclRecord.Acc) == MOSQ_ACL_READ || int32(aclRecord.Acc) == MOSQ_ACL_SUBSCRIBE))) {
 			return true
 		}
