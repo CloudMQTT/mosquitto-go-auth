@@ -1,3 +1,5 @@
+// +build http
+
 package backends
 
 import (
@@ -16,6 +18,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+func init() {
+	RegisteredBackends["http"] = NewHTTP
+	log.Info("http init")
+}
+
 type HTTP struct {
 	UserUri      string
 	SuperuserUri string
@@ -33,7 +40,7 @@ type HTTPResponse struct {
 	Error string `json:"error"`
 }
 
-func NewHTTP(authOpts map[string]string, logLevel log.Level) (HTTP, error) {
+func NewHTTP(authOpts map[string]string, logLevel log.Level) (Backend, error) {
 
 	log.SetLevel(logLevel)
 

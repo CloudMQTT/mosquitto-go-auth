@@ -1,3 +1,5 @@
+// +build jwt AND (mysql OR postgres)
+
 package backends
 
 import (
@@ -20,12 +22,16 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
+func init() {
+	RegisteredBackends["jwt"] = NewJWT
+	log.Info("jwt init")
+}
+
 type JWT struct {
 	Remote  bool
 	LocalDB string
 
-	Postgres       Postgres
-	Mysql          Mysql
+	Backend        Backend
 	Secret         string
 	UserQuery      string
 	SuperuserQuery string
@@ -57,7 +63,7 @@ type Response struct {
 	Error string `json:"error"`
 }
 
-func NewJWT(authOpts map[string]string, logLevel log.Level) (JWT, error) {
+func NewJWT(authOpts map[string]string, logLevel log.Level) (Backend, error) {
 
 	log.SetLevel(logLevel)
 
@@ -183,7 +189,7 @@ func NewJWT(authOpts map[string]string, logLevel log.Level) (JWT, error) {
 
 		if jwt.LocalDB == "mysql" {
 			//Try to create a mysql backend with these custom queries
-			mysql, err := NewMysql(authOpts, logLevel)
+			mysql, err := RegisteredBackends["mysql"](authOpts, logLevel)
 			if err != nil {
 				return jwt, errors.Errorf("JWT backend error: couldn't create mysql connector for local jwt: %s\n", err)
 			}
@@ -191,10 +197,10 @@ func NewJWT(authOpts map[string]string, logLevel log.Level) (JWT, error) {
 			mysql.SuperuserQuery = jwt.SuperuserQuery
 			mysql.AclQuery = jwt.AclQuery
 
-			jwt.Mysql = mysql
+			jwt.Backend = mysql
 		} else {
 			//Try to create a postgres backend with these custom queries.
-			postgres, err := NewPostgres(authOpts, logLevel)
+			postgres, err := RegisteredBackends["postgres"](authOpts, logLevel)
 			if err != nil {
 				return jwt, errors.Errorf("JWT backend error: couldn't create postgres connector for local jwt: %s\n", err)
 			}
@@ -202,7 +208,7 @@ func NewJWT(authOpts map[string]string, logLevel log.Level) (JWT, error) {
 			postgres.SuperuserQuery = jwt.SuperuserQuery
 			postgres.AclQuery = jwt.AclQuery
 
-			jwt.Postgres = postgres
+			jwt.Backend = postgres
 		}
 
 	}
@@ -256,18 +262,9 @@ func (o JWT) GetSuperuser(token string) bool {
 	}
 	//Now check against DB
 	if o.UserField == "Username" {
-		if o.LocalDB == "mysql" {
-			return o.Mysql.GetSuperuser(claims.Username)
-		} else {
-			return o.Postgres.GetSuperuser(claims.Username)
-		}
+		return o.Backend.GetSuperuser(claims.Username)
 	}
-
-	if o.LocalDB == "mysql" {
-		return o.Mysql.GetSuperuser(claims.Subject)
-	} else {
-		return o.Postgres.GetSuperuser(claims.Subject)
-	}
+	return o.Backend.GetSuperuser(claims.Subject)
 
 }
 
@@ -301,18 +298,9 @@ func (o JWT) CheckAcl(token, topic, clientid string, acc int32) bool {
 	}
 	//Now check against the DB.
 	if o.UserField == "Username" {
-		if o.LocalDB == "mysql" {
-			return o.Mysql.CheckAcl(claims.Username, topic, clientid, acc)
-		} else {
-			return o.Postgres.CheckAcl(claims.Username, topic, clientid, acc)
-		}
+		return o.Backend.CheckAcl(claims.Username, topic, clientid, acc)
 	}
-	if o.LocalDB == "mysql" {
-		return o.Mysql.CheckAcl(claims.Subject, topic, clientid, acc)
-	} else {
-		return o.Postgres.CheckAcl(claims.Subject, topic, clientid, acc)
-	}
-
+	return o.Backend.CheckAcl(claims.Subject, topic, clientid, acc)
 }
 
 func jwtRequest(host, uri, token string, withTLS, verifyPeer bool, dataMap map[string]interface{}, port, paramsMode, responseMode string, urlValues url.Values) bool {
@@ -436,11 +424,7 @@ func (o JWT) getLocalUser(username string) bool {
 
 	var count sql.NullInt64
 	var err error
-	if o.LocalDB == "mysql" {
-		err = o.Mysql.DB.Get(&count, o.UserQuery, username)
-	} else {
-		err = o.Postgres.DB.Get(&count, o.UserQuery, username)
-	}
+	err = o.Backend.DB.Get(&count, o.UserQuery, username)
 
 	if err != nil {
 		log.Debugf("Local JWT get user error: %s\n", err)
@@ -486,17 +470,7 @@ func (o JWT) getClaims(tokenStr string) (*Claims, error) {
 
 //Halt closes any DB connection.
 func (o JWT) Halt() {
-	if o.Postgres != (Postgres{}) && o.Postgres.DB != nil {
-		err := o.Postgres.DB.Close()
-		if err != nil {
-			log.Errorf("JWT cleanup error: %s", err)
-		}
-	} else if o.Mysql != (Mysql{}) && o.Mysql.DB != nil {
-		err := o.Mysql.DB.Close()
-		if err != nil {
-			log.Errorf("JWT cleanup error: %s", err)
-		}
-	}
+	o.Backend.Halt()
 }
 
 func (o JWT) Reload() {}

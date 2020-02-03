@@ -1,3 +1,5 @@
+// +build postgres
+
 package backends
 
 import (
@@ -13,6 +15,11 @@ import (
 
 	"github.com/iegomez/mosquitto-go-auth/common"
 )
+
+func init() {
+	RegisteredBackends["postgres"] = NewPostgres
+	log.Info("postgres init")
+}
 
 //Postgres holds all fields of the postgres db connection.
 type Postgres struct {
@@ -31,7 +38,7 @@ type Postgres struct {
 	SSLRootCert    string
 }
 
-func NewPostgres(authOpts map[string]string, logLevel log.Level) (Postgres, error) {
+func NewPostgres(authOpts map[string]string, logLevel log.Level) (Backend, error) {
 
 	log.SetLevel(logLevel)
 

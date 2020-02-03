@@ -21,14 +21,7 @@ import (
 	bes "github.com/iegomez/mosquitto-go-auth/backends"
 )
 
-type Backend interface {
-	GetUser(username, password string) bool
-	GetSuperuser(username string) bool
-	CheckAcl(username, topic, clientId string, acc int32) bool
-	GetName() string
-	Halt()
-	Reload()
-}
+type Backend bes.Backend
 
 type CommonData struct {
 	Backends         map[string]Backend
@@ -60,15 +53,15 @@ type Cache struct {
 }
 
 var allowedBackends = map[string]bool{
-	"postgres": true,
-	"jwt":      true,
-	"redis":    true,
-	"http":     true,
-	"files":    true,
-	"mysql":    true,
-	"sqlite":   true,
-	"mongo":    true,
-	"plugin":   true,
+	//	"postgres": true,
+	//	"jwt":      true,
+	//	"redis":    true,
+	"http":  true,
+	"files": true,
+	//	"mysql":    true,
+	//	"sqlite":   true,
+	//	"mongo":    true,
+	//	"plugin":   true,
 }
 
 var backends []string          //List of selected backends.
@@ -114,7 +107,7 @@ func AuthPluginInit(keys []string, values []string, authOptsNum int) {
 			if len(backends) > 0 {
 				backendsCheck := true
 				for _, backend := range backends {
-					if _, ok := allowedBackends[backend]; !ok {
+					if _, ok := bes.RegisteredBackends[backend]; !ok {
 						backendsCheck = false
 						log.Errorf("backend not allowed: %s", backend)
 					}
@@ -175,7 +168,6 @@ func AuthPluginInit(keys []string, values []string, authOptsNum int) {
 
 	//Initialize backends
 	for _, bename := range backends {
-		var beIface Backend
 		var bErr error
 
 		if bename == "plugin" {
@@ -270,74 +262,13 @@ func AuthPluginInit(keys []string, values []string, authOptsNum int) {
 
 			}
 		} else {
-			switch bename {
-			case "postgres":
-				beIface, bErr = bes.NewPostgres(authOpts, commonData.LogLevel)
-				if bErr != nil {
-					log.Fatalf("Backend register error: couldn't initialize %s backend with error %s.", bename, bErr)
-				} else {
-					log.Infof("Backend registered: %s", beIface.GetName())
-					cmbackends["postgres"] = beIface.(bes.Postgres)
-				}
-			case "jwt":
-				beIface, bErr = bes.NewJWT(authOpts, commonData.LogLevel)
-				if bErr != nil {
-					log.Fatalf("Backend register error: couldn't initialize %s backend with error %s.", bename, bErr)
-				} else {
-					log.Infof("Backend registered: %s", beIface.GetName())
-					cmbackends["jwt"] = beIface.(bes.JWT)
-				}
-			case "files":
-				beIface, bErr = bes.NewFiles(authOpts, commonData.LogLevel)
-				if bErr != nil {
-					log.Fatalf("Backend register error: couldn't initialize %s backend with error %s.", bename, bErr)
-				} else {
-					log.Infof("Backend registered: %s", beIface.GetName())
-					cmbackends["files"] = beIface.(bes.Files)
-				}
-			case "redis":
-				beIface, bErr = bes.NewRedis(authOpts, commonData.LogLevel)
-				if bErr != nil {
-					log.Fatalf("Backend register error: couldn't initialize %s backend with error %s.", bename, bErr)
-				} else {
-					log.Infof("Backend registered: %s", beIface.GetName())
-					cmbackends["redis"] = beIface.(bes.Redis)
-				}
-			case "mysql":
-				beIface, bErr = bes.NewMysql(authOpts, commonData.LogLevel)
-				if bErr != nil {
-					log.Fatalf("Backend register error: couldn't initialize %s backend with error %s.", bename, bErr)
-				} else {
-					log.Infof("Backend registered: %s", beIface.GetName())
-					cmbackends["mysql"] = beIface.(bes.Mysql)
-				}
-			case "http":
-				beIface, bErr = bes.NewHTTP(authOpts, commonData.LogLevel)
-				if bErr != nil {
-					log.Fatalf("Backend register error: couldn't initialize %s backend with error %s.", bename, bErr)
-				} else {
-					log.Infof("Backend registered: %s", beIface.GetName())
-					cmbackends["http"] = beIface.(bes.HTTP)
-				}
-			case "sqlite":
-				beIface, bErr = bes.NewSqlite(authOpts, commonData.LogLevel)
-				if bErr != nil {
-					log.Fatalf("Backend register error: couldn't initialize %s backend with error %s.", bename, bErr)
-				} else {
-					log.Infof("Backend registered: %s", beIface.GetName())
-					cmbackends["sqlite"] = beIface.(bes.Sqlite)
-				}
-			case "mongo":
-				beIface, bErr = bes.NewMongo(authOpts, commonData.LogLevel)
-				if bErr != nil {
-					log.Fatalf("Backend register error: couldn't initialize %s backend with error %s.", bename, bErr)
-				} else {
-					log.Infof("Backend registered: %s", beIface.GetName())
-					cmbackends["mongo"] = beIface.(bes.Mongo)
-				}
+			cmbackends[bename], bErr = bes.RegisteredBackends[bename](authOpts, commonData.LogLevel)
+			if bErr != nil {
+				log.Fatalf("Backend register error: couldn't initialize %s backend with error %s.", bename, bErr)
+			} else {
+				log.Infof("Backend registered: %s", cmbackends[bename].GetName())
 			}
 		}
-
 	}
 
 	if cache, ok := authOpts["cache"]; ok && strings.Replace(cache, " ", "", -1) == "true" {

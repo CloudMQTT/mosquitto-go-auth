@@ -1,3 +1,5 @@
+// +build mysql
+
 package backends
 
 import (

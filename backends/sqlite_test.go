@@ -1,3 +1,5 @@
+// +builf sqlite
+
 package backends
 
 import (

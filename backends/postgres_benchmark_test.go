@@ -1,3 +1,5 @@
+// +build postgres
+
 package backends
 
 import (

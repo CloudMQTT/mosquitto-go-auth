@@ -1,3 +1,5 @@
+// +build files
+
 package backends
 
 import (
@@ -12,6 +14,11 @@ import (
 
 	"github.com/iegomez/mosquitto-go-auth/common"
 )
+
+func init() {
+	RegisteredBackends["files"] = NewFiles
+	log.Info("files init")
+}
 
 // saltSize defines the salt size
 const saltSize = 16
@@ -41,7 +48,7 @@ type Files struct {
 }
 
 //NewFiles initializes a files backend.
-func NewFiles(authOpts map[string]string, logLevel log.Level) (Files, error) {
+func NewFiles(authOpts map[string]string, logLevel log.Level) (Backend, error) {
 
 	log.SetLevel(logLevel)
 
@@ -178,15 +185,7 @@ func (o *Files) readAcls() (int, error) {
 
 			//Check format
 			if len(lineArr) == 2 && lineArr[0] == "user" {
-				_, ok := o.Users[lineArr[1]]
-
-				//Check that user exists
-				if !ok {
-					return 0, errors.Errorf("Files backend error: user %s does not exist for acl at line %d\n", lineArr[1], index)
-				}
-
 				currentUser = lineArr[1]
-
 			} else {
 				return 0, errors.Errorf("Files backend error: wrong acl format at line %d\n", index)
 			}

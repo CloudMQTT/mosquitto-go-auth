@@ -1,7 +1,8 @@
+BACKENDS='files http'
+
 all:
-	go build -buildmode=c-archive go-auth.go
-	go build -buildmode=c-shared -o go-auth.so
-	go build pw-gen/pw.go
+	go build -tags=$(BACKENDS) -buildmode=c-archive go-auth.go
+	go build -tags=$(BACKENDS) -buildmode=c-shared -o go-auth.so
 
 requirements:
 	dep ensure -v

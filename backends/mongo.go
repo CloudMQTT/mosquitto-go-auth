@@ -1,3 +1,5 @@
+// +build mongo
+
 package backends
 
 import (
@@ -16,6 +18,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+func init() {
+	RegisteredBackends["mongo"] = NewMongo
+	log.Info("mongo init")
+}
 
 type Mongo struct {
 	Host            string
@@ -40,7 +47,7 @@ type MongoUser struct {
 	Acls         []MongoAcl `bson:"acls"`
 }
 
-func NewMongo(authOpts map[string]string, logLevel log.Level) (Mongo, error) {
+func NewMongo(authOpts map[string]string, logLevel log.Level) (Backend, error) {
 
 	log.SetLevel(logLevel)
 

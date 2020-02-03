@@ -122,10 +122,21 @@ func hashWithSalt(password string, salt []byte, iterations int, algorithm string
 	return buffer.String()
 }
 
+func hashCompareMosquitto(password string, passwordHash string) bool {
+	hashSplit := strings.Split(passwordHash, "$")
+	salt, _ := base64.StdEncoding.DecodeString(hashSplit[2])
+	sum := sha512.Sum512([]byte(fmt.Sprintf("%s%s", password, string(salt[:]))))
+	hashedPassword := base64.StdEncoding.EncodeToString(sum[:])
+	return hashedPassword == hashSplit[3]
+}
+
 // HashCompare verifies that passed password hashes to the same value as the
 // passed passwordHash.
 // Taken from brocaar's lora-app-server: https://github.com/brocaar/lora-app-server
 func HashCompare(password string, passwordHash string) bool {
+	if strings.HasPrefix(passwordHash, "$6$") {
+		return hashCompareMosquitto(password, passwordHash)
+	}
 	// SPlit the hash string into its parts.
 	hashSplit := strings.Split(passwordHash, "$")
 

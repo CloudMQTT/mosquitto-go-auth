@@ -1,3 +1,5 @@
+// +build sqlite
+
 package backends
 
 import (
@@ -13,6 +15,11 @@ import (
 	"github.com/iegomez/mosquitto-go-auth/common"
 )
 
+func init() {
+	registeredbackends["sqlite"] = NewSqlite
+	log.info("sqlite init")
+}
+
 //Sqlite holds all fields of the sqlite db connection.
 type Sqlite struct {
 	DB             *sqlx.DB
@@ -22,7 +29,7 @@ type Sqlite struct {
 	AclQuery       string
 }
 
-func NewSqlite(authOpts map[string]string, logLevel log.Level) (Sqlite, error) {
+func NewSqlite(authOpts map[string]string, logLevel log.Level) (Backend, error) {
 
 	log.SetLevel(logLevel)
 

@@ -1,3 +1,5 @@
+// +build mysql
+
 package backends
 
 import (
@@ -17,6 +19,11 @@ import (
 
 	"github.com/iegomez/mosquitto-go-auth/common"
 )
+
+func init() {
+	RegisteredBackends["mysql"] = NewMysql
+	log.Info("mysql init")
+}
 
 //Mysql holds all fields of the Mysql db connection.
 type Mysql struct {
@@ -38,7 +45,7 @@ type Mysql struct {
 	AllowNativePasswords bool
 }
 
-func NewMysql(authOpts map[string]string, logLevel log.Level) (Mysql, error) {
+func NewMysql(authOpts map[string]string, logLevel log.Level) (Backend, error) {
 
 	log.SetLevel(logLevel)
 

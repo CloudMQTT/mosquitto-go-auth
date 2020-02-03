@@ -1,3 +1,5 @@
+// +build redis
+
 package backends
 
 import (
@@ -13,6 +15,11 @@ import (
 	goredis "github.com/go-redis/redis"
 )
 
+func init() {
+	RegisteredBackends["redis"] = NewRedis
+	log.Info("redis init")
+}
+
 type Redis struct {
 	Host     string
 	Port     string
@@ -21,7 +28,7 @@ type Redis struct {
 	Conn     *goredis.Client
 }
 
-func NewRedis(authOpts map[string]string, logLevel log.Level) (Redis, error) {
+func NewRedis(authOpts map[string]string, logLevel log.Level) (Backend, error) {
 
 	log.SetLevel(logLevel)
 

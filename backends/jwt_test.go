@@ -1,3 +1,5 @@
+// +build jwt
+
 package backends
 
 import (
