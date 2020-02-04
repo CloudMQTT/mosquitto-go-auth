@@ -187,12 +187,13 @@ func (o *Files) readAcls() (int, error) {
 			if len(lineArr) == 2 && lineArr[0] == "user" {
 				currentUser = lineArr[1]
 			} else {
-				return 0, errors.Errorf("Files backend error: wrong acl format at line %d\n", index)
+				log.Warnf("Files backend error: wrong acl format at line %d", index)
+				continue
 			}
 		} else if strings.Contains(line, "topic") {
 
 			//Split and check for read, write or empty (readwwrite) privileges.
-			lineArr := strings.Fields(line)
+			lineArr := strings.SplitN(line, " ", 3)
 
 			if (len(lineArr) == 2 || len(lineArr) == 3) && lineArr[0] == "topic" {
 
@@ -216,7 +217,8 @@ func (o *Files) readAcls() (int, error) {
 					} else if lineArr[1] == "subscribe" {
 						aclRecord.Acc = MOSQ_ACL_SUBSCRIBE
 					} else {
-						return 0, errors.Errorf("Files backend error: wrong acl format at line %d\n", index)
+						log.Warnf("Files backend error: wrong acl format at line %d", index)
+						continue
 					}
 				}
 
@@ -227,20 +229,23 @@ func (o *Files) readAcls() (int, error) {
 					//						userRecords = make([]AclRecord, 0, 0)
 					//					}
 					userAclRecords[currentUser] = append(userAclRecords[currentUser], aclRecord)
+					log.Debugf(" acl topic rule '%s' (%d) added to user %s", aclRecord.Topic, aclRecord.Acc, currentUser)
 				} else {
 					aclRecords = append(aclRecords, aclRecord)
+					log.Debugf(" acl topic rule '%s' (%d) added to no user...", aclRecord.Topic, aclRecord.Acc)
 				}
 
 				linesCount++
 
 			} else {
-				return 0, errors.Errorf("Files backend error: wrong acl format at line %d\n", index)
+				log.Warnf("Files backend error: wrong acl format at line %d", index)
+				continue
 			}
 
 		} else if strings.Contains(line, "pattern") {
 
 			//Split and check for read, write or empty (readwwrite) privileges.
-			lineArr := strings.Fields(line)
+			lineArr := strings.SplitN(line, " ", 3)
 
 			if (len(lineArr) == 2 || len(lineArr) == 3) && lineArr[0] == "pattern" {
 
@@ -264,17 +269,19 @@ func (o *Files) readAcls() (int, error) {
 					} else if lineArr[1] == "subscribe" {
 						aclRecord.Acc = MOSQ_ACL_SUBSCRIBE
 					} else {
-						return 0, errors.Errorf("Files backend error: wrong acl format at line %d\n", index)
+						log.Warnf("Files backend error: wrong acl format at line %d", index)
+						continue
 					}
 				}
 
+				log.Debugf(" acl pattern rule '%s' (%d) added", aclRecord.Topic, aclRecord.Acc)
 				//Append to general acls.
 				aclRecords = append(aclRecords, aclRecord)
 
 				linesCount++
 
 			} else {
-				return 0, errors.Errorf("Files backend error: wrong acl format at line %d\n", index)
+				log.Warnf("Files backend error: wrong acl format at line %d", index)
 			}
 
 		}
