@@ -8,16 +8,15 @@ import (
 	"os"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/pkg/errors"
 
 	"github.com/iegomez/mosquitto-go-auth/common"
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {
 	RegisteredBackends["files"] = NewFiles
-	log.Info("files init")
+	Log.Info("files init")
 }
 
 // saltSize defines the salt size
@@ -50,9 +49,9 @@ type Files struct {
 //NewFiles initializes a files backend.
 func NewFiles(authOpts map[string]string, logLevel log.Level) (Backend, error) {
 
-	log.SetLevel(logLevel)
+	Log.SetLevel(logLevel)
 
-	var files = Files{
+	var files = &Files{
 		PasswordPath:   "",
 		AclPath:        "",
 		CheckAcls:      false,
@@ -72,7 +71,7 @@ func NewFiles(authOpts map[string]string, logLevel log.Level) (Backend, error) {
 		files.CheckAcls = true
 	} else {
 		files.CheckAcls = false
-		log.Info("Acls won't be checked.\n")
+		Log.Info("Acls won't be checked.\n")
 	}
 
 	//Now initialize FileUsers by reading from password and acl files.
@@ -80,7 +79,7 @@ func NewFiles(authOpts map[string]string, logLevel log.Level) (Backend, error) {
 	if uErr != nil {
 		return files, errors.Errorf("Fatal: %s\n", uErr)
 	} else {
-		log.Infof("Got %d users from passwords file.\n", uCount)
+		Log.Infof("Got %d users from passwords file.\n", uCount)
 	}
 
 	//Only read acls if path was given.
@@ -89,7 +88,7 @@ func NewFiles(authOpts map[string]string, logLevel log.Level) (Backend, error) {
 		if aclErr != nil {
 			return files, errors.Errorf("Fatal: %s\n", aclErr)
 		} else {
-			log.Infof("Got %d lines from acl file.\n", aclCount)
+			Log.Infof("Got %d lines from acl file.\n", aclCount)
 		}
 	}
 
@@ -123,7 +122,7 @@ func (o *Files) readPasswords() (int, error) {
 
 		lineArr := strings.Split(scanner.Text(), ":")
 		if len(lineArr) != 2 {
-			log.Errorf("Read passwords error: line %d is not well formatted.\n", index)
+			Log.Errorf("Read passwords error: line %d is not well formatted.\n", index)
 			continue
 		}
 		//Create user if it doesn't exist and save password; override password if user existed.
@@ -141,9 +140,9 @@ func (o *Files) readPasswords() (int, error) {
 		}
 	}
 	o.Users = users
-	log.Debugf("users from file: ")
+	Log.Debugf("users from file: ")
 	for k := range o.Users {
-		log.Debugf(" %s", k)
+		Log.Debugf(" %s", k)
 	}
 
 	return usersCount, nil
@@ -187,7 +186,7 @@ func (o *Files) readAcls() (int, error) {
 			if len(lineArr) == 2 && lineArr[0] == "user" {
 				currentUser = lineArr[1]
 			} else {
-				log.Warnf("Files backend error: wrong acl format at line %d", index)
+				Log.Warnf("Files backend error: wrong acl format at line %d", index)
 				continue
 			}
 		} else if strings.Contains(line, "topic") {
@@ -217,7 +216,7 @@ func (o *Files) readAcls() (int, error) {
 					} else if lineArr[1] == "subscribe" {
 						aclRecord.Acc = MOSQ_ACL_SUBSCRIBE
 					} else {
-						log.Warnf("Files backend error: wrong acl format at line %d", index)
+						Log.Warnf("Files backend error: wrong acl format at line %d", index)
 						continue
 					}
 				}
@@ -229,16 +228,16 @@ func (o *Files) readAcls() (int, error) {
 					//						userRecords = make([]AclRecord, 0, 0)
 					//					}
 					userAclRecords[currentUser] = append(userAclRecords[currentUser], aclRecord)
-					log.Debugf(" acl topic rule '%s' (%d) added to user %s", aclRecord.Topic, aclRecord.Acc, currentUser)
+					Log.Debugf(" acl topic rule '%s' (%d) added to user %s", aclRecord.Topic, aclRecord.Acc, currentUser)
 				} else {
 					aclRecords = append(aclRecords, aclRecord)
-					log.Debugf(" acl topic rule '%s' (%d) added to no user...", aclRecord.Topic, aclRecord.Acc)
+					Log.Debugf(" acl topic rule '%s' (%d) added to no user...", aclRecord.Topic, aclRecord.Acc)
 				}
 
 				linesCount++
 
 			} else {
-				log.Warnf("Files backend error: wrong acl format at line %d", index)
+				Log.Warnf("Files backend error: wrong acl format at line %d", index)
 				continue
 			}
 
@@ -269,19 +268,19 @@ func (o *Files) readAcls() (int, error) {
 					} else if lineArr[1] == "subscribe" {
 						aclRecord.Acc = MOSQ_ACL_SUBSCRIBE
 					} else {
-						log.Warnf("Files backend error: wrong acl format at line %d", index)
+						Log.Warnf("Files backend error: wrong acl format at line %d", index)
 						continue
 					}
 				}
 
-				log.Debugf(" acl pattern rule '%s' (%d) added", aclRecord.Topic, aclRecord.Acc)
+				Log.Debugf(" acl pattern rule '%s' (%d) added", aclRecord.Topic, aclRecord.Acc)
 				//Append to general acls.
 				aclRecords = append(aclRecords, aclRecord)
 
 				linesCount++
 
 			} else {
-				log.Warnf("Files backend error: wrong acl format at line %d", index)
+				Log.Warnf("Files backend error: wrong acl format at line %d", index)
 			}
 
 		}
@@ -300,7 +299,7 @@ func checkCommentOrEmpty(line string) bool {
 }
 
 //GetUser checks that user exists and password is correct.
-func (o Files) GetUser(username, password string) bool {
+func (o *Files) GetUser(username, password string) bool {
 
 	fileUser, ok := o.Users[username]
 	if !ok {
@@ -311,42 +310,63 @@ func (o Files) GetUser(username, password string) bool {
 		return true
 	}
 
-	log.Infof("[files] wrong password for user %s\n", username)
+	Log.Infof("[files] wrong password for user %s\n", username)
 
 	return false
 
 }
 
 //GetSuperuser returns false for files backend.
-func (o Files) GetSuperuser(username string) bool {
+func (o *Files) GetSuperuser(username string) bool {
 	return false
 }
 
 //CheckAcl checks that the topic may be read/written by the given user/clientid.
-func (o Files) CheckAcl(username, topic, clientid string, acc int32) bool {
+func (o *Files) CheckAcl(username, topic, clientid string, acc int32) bool {
 	//If there are no acls, all access is allowed.
 	if !o.CheckAcls {
 		return true
 	}
+
+	accToCheck := byte(acc)
 
 	fileUserRecords, ok := o.UserAclRecords[username]
 
 	//If user exists, check against his acls and common ones. If not, check against common acls only.
 	if ok {
 		for _, aclRecord := range fileUserRecords {
-			log.Debugf("fileUserRecord = %s", aclRecord.Topic)
-			if common.TopicsMatch(aclRecord.Topic, topic) && (acc == int32(aclRecord.Acc) || int32(aclRecord.Acc) == MOSQ_ACL_READWRITE || (acc == MOSQ_ACL_SUBSCRIBE && topic != "#" && (int32(aclRecord.Acc) == MOSQ_ACL_READ || int32(aclRecord.Acc) == MOSQ_ACL_SUBSCRIBE))) {
-				return true
+			Log.Debugf("fileUserRecord.topic = %s fileUserRecord.acc = %d, check topic = %s, permission = %d", aclRecord.Topic, aclRecord.Acc, topic, acc)
+			if common.TopicsMatch(aclRecord.Topic, topic) {
+				if accToCheck == MOSQ_ACL_SUBSCRIBE || accToCheck == aclRecord.Acc {
+					return true
+				}
+				if accToCheck == MOSQ_ACL_READ && (aclRecord.Acc == MOSQ_ACL_READWRITE) {
+					return true
+				}
+				if accToCheck == MOSQ_ACL_WRITE && (aclRecord.Acc == MOSQ_ACL_READWRITE) {
+					return true
+				}
 			}
 		}
+	} else {
+		Log.Debugf("No acl rules in file for %s", username)
 	}
 	for _, aclRecord := range o.AclRecords {
 		//Replace all occurrences of %c for clientid and %u for username
 		aclTopic := strings.Replace(aclRecord.Topic, "%c", clientid, -1)
 		aclTopic = strings.Replace(aclTopic, "%u", username, -1)
-		log.Debugf("acltopic = %s (%s)", aclTopic, aclRecord.Topic)
-		if common.TopicsMatch(aclTopic, topic) && (acc == int32(aclRecord.Acc) || int32(aclRecord.Acc) == MOSQ_ACL_READWRITE || (acc == MOSQ_ACL_SUBSCRIBE && topic != "#" && (int32(aclRecord.Acc) == MOSQ_ACL_READ || int32(aclRecord.Acc) == MOSQ_ACL_SUBSCRIBE))) {
-			return true
+		Log.Debugf("acltopic = %s (%s)", aclTopic, aclRecord.Topic)
+		Log.Debugf("patternRecord.topic = %s patternRecord.acc = %d, check topic = %s, permission = %d", aclRecord.Topic, aclRecord.Acc, topic, acc)
+		if common.TopicsMatch(aclRecord.Topic, topic) {
+			if accToCheck == MOSQ_ACL_SUBSCRIBE || accToCheck == aclRecord.Acc {
+				return true
+			}
+			if accToCheck == MOSQ_ACL_READ && (aclRecord.Acc == MOSQ_ACL_READWRITE) {
+				return true
+			}
+			if accToCheck == MOSQ_ACL_WRITE && (aclRecord.Acc == MOSQ_ACL_READWRITE) {
+				return true
+			}
 		}
 	}
 
@@ -355,18 +375,19 @@ func (o Files) CheckAcl(username, topic, clientid string, acc int32) bool {
 }
 
 //GetName returns the backend's name
-func (o Files) GetName() string {
+func (o *Files) GetName() string {
 	return "Files"
 }
 
 //Halt does nothing for files as there's no cleanup needed.
-func (o Files) Halt() {
+func (o *Files) Halt() {
 	//Do nothing
 }
 
-func (o Files) Reload() {
-	log.Info("Read passwords")
+func (o *Files) Reload() {
+	Log.Info("Read passwords")
+
 	o.readPasswords()
-	log.Info("Read acls")
+	Log.Info("Read acls")
 	o.readAcls()
 }

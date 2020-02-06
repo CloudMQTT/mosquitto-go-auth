@@ -52,22 +52,37 @@ type Cache struct {
 	DB       int32
 }
 
-var allowedBackends = map[string]bool{
-	//	"postgres": true,
-	//	"jwt":      true,
-	//	"redis":    true,
-	"http":  true,
-	"files": true,
-	//	"mysql":    true,
-	//	"sqlite":   true,
-	//	"mongo":    true,
-	//	"plugin":   true,
-}
-
 var backends []string          //List of selected backends.
 var authOpts map[string]string //Options passed by mosquitto.
 var cache Cache                //Cache conf.
 var commonData CommonData      //General struct with options and conf.
+
+func setLogLevel(authOpts map[string]string) {
+	//Check if log level is given. Set level if any valid option is given.
+	if logLevel, ok := authOpts["log_level"]; ok {
+
+		logLevel = strings.Replace(logLevel, " ", "", -1)
+		log.Infof("Setting log level to %s", logLevel)
+
+		switch logLevel {
+		case "debug":
+			commonData.LogLevel = log.DebugLevel
+		case "info":
+			commonData.LogLevel = log.InfoLevel
+		case "warn":
+			commonData.LogLevel = log.WarnLevel
+		case "error":
+			commonData.LogLevel = log.ErrorLevel
+		case "fatal":
+			commonData.LogLevel = log.FatalLevel
+		case "panic":
+			commonData.LogLevel = log.PanicLevel
+		default:
+			log.Info("log_level unkwown, using default info level")
+		}
+		log.SetLevel(commonData.LogLevel)
+	}
+}
 
 //export AuthPluginInit
 func AuthPluginInit(keys []string, values []string, authOptsNum int) {
@@ -102,20 +117,21 @@ func AuthPluginInit(keys []string, values []string, authOptsNum int) {
 	backendsOk := false
 	authOpts = make(map[string]string)
 	for i := 0; i < authOptsNum; i++ {
-		if keys[i] == "backends" {
-			backends = strings.Split(strings.Replace(values[i], " ", "", -1), ",")
-			if len(backends) > 0 {
-				backendsCheck := true
-				for _, backend := range backends {
-					if _, ok := bes.RegisteredBackends[backend]; !ok {
-						backendsCheck = false
-						log.Errorf("backend not allowed: %s", backend)
-					}
+		log.Debugf("%s = %s", keys[i], values[i])
+		authOpts[keys[i]] = values[i]
+	}
+
+	if backendsStr, ok := authOpts["backends"]; ok {
+		backends = strings.Split(strings.Replace(backendsStr, " ", "", -1), ",")
+		if len(backends) > 0 {
+			backendsCheck := true
+			for _, backend := range backends {
+				if _, ok := bes.RegisteredBackends[backend]; !ok {
+					backendsCheck = false
+					log.Errorf("backend not allowed: %s", backend)
 				}
-				backendsOk = backendsCheck
 			}
-		} else {
-			authOpts[keys[i]] = values[i]
+			backendsOk = backendsCheck
 		}
 	}
 
@@ -124,29 +140,7 @@ func AuthPluginInit(keys []string, values []string, authOptsNum int) {
 		log.Fatal("\nbackends error\n")
 	}
 
-	//Check if log level is given. Set level if any valid option is given.
-	if logLevel, ok := authOpts["log_level"]; ok {
-
-		logLevel = strings.Replace(logLevel, " ", "", -1)
-
-		switch logLevel {
-		case "debug":
-			commonData.LogLevel = log.DebugLevel
-		case "info":
-			commonData.LogLevel = log.InfoLevel
-		case "warn":
-			commonData.LogLevel = log.WarnLevel
-		case "error":
-			commonData.LogLevel = log.ErrorLevel
-		case "fatal":
-			commonData.LogLevel = log.FatalLevel
-		case "panic":
-			commonData.LogLevel = log.PanicLevel
-		default:
-			log.Info("log_level unkwown, using default info level")
-		}
-
-	}
+	setLogLevel(authOpts)
 
 	if logDest, ok := authOpts["log_dest"]; ok {
 		switch logDest {
@@ -625,13 +619,10 @@ func CheckBackendsAcl(username, topic, clientid string, acc int) bool {
 
 	if !aclCheck {
 		for _, bename := range backends {
-
 			if bename == "plugin" {
 				continue
 			}
-
 			var backend = commonData.Backends[bename]
-
 			log.Debugf("Acl check with backend %s", backend.GetName())
 			if backend.CheckAcl(username, topic, clientid, int32(acc)) {
 				log.Debugf("user %s acl authenticated with backend %s", username, backend.GetName())
@@ -685,16 +676,13 @@ func AuthPluginCleanup() {
 
 //export AuthReload
 func AuthReload() {
-	log.Info("Reloading...")
+	log.Info("Reloading.")
 	for _, bename := range backends {
-
 		if bename == "plugin" {
 			continue
 		}
-
 		var backend = commonData.Backends[bename]
-
-		log.Infof("* reloading %s", backend.GetName())
+		log.Infof("- Reloading %s", backend.GetName())
 		backend.Reload()
 	}
 	log.Info("Reloaded.")

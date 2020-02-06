@@ -15,3 +15,4 @@ type Backend interface {
 type createFunc func(authOpts map[string]string, logLevel log.Level) (Backend, error)
 
 var RegisteredBackends = make(map[string]createFunc)
+var Log = log.New()
