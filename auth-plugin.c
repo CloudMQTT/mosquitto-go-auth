@@ -9,6 +9,7 @@
 #if MOSQ_AUTH_PLUGIN_VERSION >= 3
 # include <mosquitto_broker.h>
 #endif
+
 #include "go-auth.h"
 
 #if MOSQ_AUTH_PLUGIN_VERSION >= 3

@@ -1,8 +1,8 @@
 BACKENDS='files http'
 
 all:
-	go build -tags=$(BACKENDS) -buildmode=c-archive go-auth.go
-	go build -tags=$(BACKENDS) -buildmode=c-shared -o go-auth.so
+	CGO_LDFLAGS_ALLOW="-undefined|dynamic_lookup" go build -tags=$(BACKENDS) -buildmode=c-archive go-auth.go
+	CGO_LDFLAGS_ALLOW="-undefined|dynamic_lookup" go build -tags=$(BACKENDS) -buildmode=c-shared -o go-auth.so
 
 requirements:
 	dep ensure -v

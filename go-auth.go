@@ -2,6 +2,7 @@ package main
 
 // #cgo CFLAGS: -fPIC
 // #cgo LDFLAGS: -shared
+// #cgo darwin LDFLAGS: -undefined dynamic_lookup
 import "C"
 
 import (
