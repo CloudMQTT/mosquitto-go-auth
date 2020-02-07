@@ -25,11 +25,6 @@ const saltSize = 16
 // HashIterations defines the number of hash iterations.
 var HashIterations = 100000
 
-//FileUer keeps a user password and acl records.
-type FileUser struct {
-	Password string
-}
-
 //AclRecord holds a topic and access privileges.
 type AclRecord struct {
 	Topic string
@@ -41,7 +36,7 @@ type Files struct {
 	PasswordPath   string
 	AclPath        string
 	CheckAcls      bool
-	Users          map[string]*FileUser //Users keeps a registry of username/FileUser pairs, holding a user's password and Acl records.
+	Users          map[string]string
 	UserAclRecords map[string][]AclRecord
 	AclRecords     []AclRecord
 }
@@ -55,7 +50,7 @@ func NewFiles(authOpts map[string]string, logLevel log.Level) (Backend, error) {
 		PasswordPath:   "",
 		AclPath:        "",
 		CheckAcls:      false,
-		Users:          make(map[string]*FileUser),
+		Users:          make(map[string]string),
 		UserAclRecords: make(map[string][]AclRecord),
 		AclRecords:     make([]AclRecord, 0, 0),
 	}
@@ -74,12 +69,11 @@ func NewFiles(authOpts map[string]string, logLevel log.Level) (Backend, error) {
 		Log.Info("Acls won't be checked.\n")
 	}
 
+	var uErr error
 	//Now initialize FileUsers by reading from password and acl files.
-	uCount, uErr := files.readPasswords()
+	files.Users, uErr = readPasswords(files.PasswordPath)
 	if uErr != nil {
 		return files, errors.Errorf("Fatal: %s\n", uErr)
-	} else {
-		Log.Infof("Got %d users from passwords file.\n", uCount)
 	}
 
 	//Only read acls if path was given.
@@ -97,15 +91,14 @@ func NewFiles(authOpts map[string]string, logLevel log.Level) (Backend, error) {
 }
 
 //ReadPasswords read file and populates FileUsers. Return amount of users seen and possile error.
-func (o *Files) readPasswords() (int, error) {
+func readPasswords(path string) (map[string]string, error) {
 
-	users := make(map[string]*FileUser)
-	usersCount := 0
+	users := make(map[string]string)
 
-	file, fErr := os.Open(o.PasswordPath)
+	file, fErr := os.Open(path)
 	defer file.Close()
 	if fErr != nil {
-		return usersCount, fmt.Errorf("Files backend error: couldn't open passwords file: %s\n", fErr)
+		return users, fmt.Errorf("Files backend error: couldn't open passwords file: %s\n", fErr)
 	}
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
@@ -122,30 +115,18 @@ func (o *Files) readPasswords() (int, error) {
 
 		lineArr := strings.Split(scanner.Text(), ":")
 		if len(lineArr) != 2 {
-			Log.Errorf("Read passwords error: line %d is not well formatted.\n", index)
+			Log.Warnf("Read passwords error: line %d is not well formatted.\n", index)
 			continue
 		}
-		//Create user if it doesn't exist and save password; override password if user existed.
-		var fileUser *FileUser
-		var ok bool
-		fileUser, ok = users[lineArr[0]]
-		if ok {
-			fileUser.Password = lineArr[1]
-		} else {
-			usersCount++
-			fileUser = &FileUser{
-				Password: lineArr[1],
-			}
-			users[lineArr[0]] = fileUser
-		}
+
+		users[lineArr[0]] = lineArr[1]
 	}
-	o.Users = users
-	Log.Debugf("users from file: ")
-	for k := range o.Users {
+	Log.Infof("Read %d users from file", len(users))
+	for k := range users {
 		Log.Debugf(" %s", k)
 	}
 
-	return usersCount, nil
+	return users, nil
 
 }
 
@@ -301,12 +282,12 @@ func checkCommentOrEmpty(line string) bool {
 //GetUser checks that user exists and password is correct.
 func (o *Files) GetUser(username, password string) bool {
 
-	fileUser, ok := o.Users[username]
+	userPassword, ok := o.Users[username]
 	if !ok {
 		return false
 	}
 
-	if common.HashCompare(password, fileUser.Password) {
+	if common.HashCompare(password, userPassword) {
 		return true
 	}
 
@@ -375,19 +356,20 @@ func (o *Files) CheckAcl(username, topic, clientid string, acc int32) bool {
 }
 
 //GetName returns the backend's name
-func (o *Files) GetName() string {
+func (o Files) GetName() string {
 	return "Files"
 }
 
 //Halt does nothing for files as there's no cleanup needed.
-func (o *Files) Halt() {
+func (o Files) Halt() {
 	//Do nothing
 }
 
 func (o *Files) Reload() {
 	Log.Info("Read passwords")
-
-	o.readPasswords()
+	// When reloading we assume path exists since it passed
+	// validation on startup
+	o.Users, _ = readPasswords(o.PasswordPath)
 	Log.Info("Read acls")
 	o.readAcls()
 }
