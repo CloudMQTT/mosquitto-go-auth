@@ -16,7 +16,7 @@ import (
 
 	b64 "encoding/base64"
 
-	"plugin"
+	//	"plugin"
 
 	goredis "github.com/go-redis/redis"
 	bes "github.com/iegomez/mosquitto-go-auth/backends"
@@ -25,14 +25,14 @@ import (
 type Backend bes.Backend
 
 type CommonData struct {
-	Backends         map[string]Backend
-	Plugin           *plugin.Plugin
-	PInit            func(map[string]string, log.Level) error
-	PGetName         func() string
-	PGetUser         func(username, password string) bool
-	PGetSuperuser    func(username string) bool
-	PCheckAcl        func(username, topic, clientid string, acc int) bool
-	PHalt            func()
+	Backends map[string]Backend
+	//	Plugin           *plugin.Plugin
+	//	PInit            func(map[string]string, log.Level) error
+	//	PGetName         func() string
+	//	PGetUser         func(username, password string) bool
+	//	PGetSuperuser    func(username string) bool
+	//	PCheckAcl        func(username, topic, clientid string, acc int) bool
+	//	PHalt            func()
 	Superusers       []string
 	AclCacheSeconds  int64
 	AuthCacheSeconds int64
@@ -165,105 +165,105 @@ func AuthPluginInit(keys []string, values []string, authOptsNum int) {
 	for _, bename := range backends {
 		var bErr error
 
-		if bename == "plugin" {
-			plug, plErr := plugin.Open(authOpts["plugin_path"])
-			if plErr != nil {
-				log.Errorf("Could not init custom plugin: %s", plErr)
-				commonData.Plugin = nil
-			} else {
-				commonData.Plugin = plug
-
-				plInit, piErr := commonData.Plugin.Lookup("Init")
-
-				if piErr != nil {
-					log.Errorf("Couldn't find func Init in plugin: %s", plErr)
-					commonData.Plugin = nil
-					continue
-				}
-
-				initFunc := plInit.(func(authOpts map[string]string, logLevel log.Level) error)
-
-				ipErr := initFunc(authOpts, commonData.LogLevel)
-				if ipErr != nil {
-					log.Errorf("Couldn't init plugin: %s", ipErr)
-					commonData.Plugin = nil
-					continue
-				}
-
-				commonData.PInit = initFunc
-
-				plName, gErr := commonData.Plugin.Lookup("GetName")
-
-				if gErr != nil {
-					log.Errorf("Couldn't find func GetName in plugin: %s", gErr)
-					commonData.Plugin = nil
-					continue
-				}
-
-				nameFunc := plName.(func() string)
-				commonData.PGetName = nameFunc
-
-				plGetUser, pgErr := commonData.Plugin.Lookup("GetUser")
-
-				if pgErr != nil {
-					log.Errorf("Couldn't find func GetUser in plugin: %s", pgErr)
-					commonData.Plugin = nil
-					continue
-				}
-
-				getUserFunc := plGetUser.(func(username, password string) bool)
-				commonData.PGetUser = getUserFunc
-
-				if pgErr != nil {
-					log.Errorf("Couldn't find func GetUser in plugin: %s", pgErr)
-					commonData.Plugin = nil
-					continue
-				}
-
-				plGetSuperuser, psErr := commonData.Plugin.Lookup("GetSuperuser")
-
-				if psErr != nil {
-					log.Errorf("Couldn't find func GetSuperuser in plugin: %s", psErr)
-					commonData.Plugin = nil
-					continue
-				}
-
-				getSuperuserFunc := plGetSuperuser.(func(username string) bool)
-				commonData.PGetSuperuser = getSuperuserFunc
-
-				plCheckAcl, pcErr := commonData.Plugin.Lookup("CheckAcl")
-
-				if pcErr != nil {
-					log.Errorf("Couldn't find func CheckAcl in plugin: %s", pcErr)
-					commonData.Plugin = nil
-					continue
-				}
-
-				checkAclFunc := plCheckAcl.(func(username, topic, clientid string, acc int) bool)
-				commonData.PCheckAcl = checkAclFunc
-
-				plHalt, phErr := commonData.Plugin.Lookup("Halt")
-
-				if phErr != nil {
-					log.Errorf("Couldn't find func Halt in plugin: %s", phErr)
-					commonData.Plugin = nil
-					continue
-				}
-
-				haltFunc := plHalt.(func())
-				commonData.PHalt = haltFunc
-
-				log.Infof("Backend registered: %s", commonData.PGetName())
-
-			}
+		//		if bename == "plugin" {
+		//			plug, plErr := plugin.Open(authOpts["plugin_path"])
+		//			if plErr != nil {
+		//				log.Errorf("Could not init custom plugin: %s", plErr)
+		//				commonData.Plugin = nil
+		//			} else {
+		//				commonData.Plugin = plug
+		//
+		//				plInit, piErr := commonData.Plugin.Lookup("Init")
+		//
+		//				if piErr != nil {
+		//					log.Errorf("Couldn't find func Init in plugin: %s", plErr)
+		//					commonData.Plugin = nil
+		//					continue
+		//				}
+		//
+		//				initFunc := plInit.(func(authOpts map[string]string, logLevel log.Level) error)
+		//
+		//				ipErr := initFunc(authOpts, commonData.LogLevel)
+		//				if ipErr != nil {
+		//					log.Errorf("Couldn't init plugin: %s", ipErr)
+		//					commonData.Plugin = nil
+		//					continue
+		//				}
+		//
+		//				commonData.PInit = initFunc
+		//
+		//				plName, gErr := commonData.Plugin.Lookup("GetName")
+		//
+		//				if gErr != nil {
+		//					log.Errorf("Couldn't find func GetName in plugin: %s", gErr)
+		//					commonData.Plugin = nil
+		//					continue
+		//				}
+		//
+		//				nameFunc := plName.(func() string)
+		//				commonData.PGetName = nameFunc
+		//
+		//				plGetUser, pgErr := commonData.Plugin.Lookup("GetUser")
+		//
+		//				if pgErr != nil {
+		//					log.Errorf("Couldn't find func GetUser in plugin: %s", pgErr)
+		//					commonData.Plugin = nil
+		//					continue
+		//				}
+		//
+		//				getUserFunc := plGetUser.(func(username, password string) bool)
+		//				commonData.PGetUser = getUserFunc
+		//
+		//				if pgErr != nil {
+		//					log.Errorf("Couldn't find func GetUser in plugin: %s", pgErr)
+		//					commonData.Plugin = nil
+		//					continue
+		//				}
+		//
+		//				plGetSuperuser, psErr := commonData.Plugin.Lookup("GetSuperuser")
+		//
+		//				if psErr != nil {
+		//					log.Errorf("Couldn't find func GetSuperuser in plugin: %s", psErr)
+		//					commonData.Plugin = nil
+		//					continue
+		//				}
+		//
+		//				getSuperuserFunc := plGetSuperuser.(func(username string) bool)
+		//				commonData.PGetSuperuser = getSuperuserFunc
+		//
+		//				plCheckAcl, pcErr := commonData.Plugin.Lookup("CheckAcl")
+		//
+		//				if pcErr != nil {
+		//					log.Errorf("Couldn't find func CheckAcl in plugin: %s", pcErr)
+		//					commonData.Plugin = nil
+		//					continue
+		//				}
+		//
+		//				checkAclFunc := plCheckAcl.(func(username, topic, clientid string, acc int) bool)
+		//				commonData.PCheckAcl = checkAclFunc
+		//
+		//				plHalt, phErr := commonData.Plugin.Lookup("Halt")
+		//
+		//				if phErr != nil {
+		//					log.Errorf("Couldn't find func Halt in plugin: %s", phErr)
+		//					commonData.Plugin = nil
+		//					continue
+		//				}
+		//
+		//				haltFunc := plHalt.(func())
+		//				commonData.PHalt = haltFunc
+		//
+		//				log.Infof("Backend registered: %s", commonData.PGetName())
+		//
+		//			}
+		//		} else {
+		cmbackends[bename], bErr = bes.RegisteredBackends[bename](authOpts, commonData.LogLevel)
+		if bErr != nil {
+			log.Warnf("Backend register error: couldn't initialize %s backend with error %s.", bename, bErr)
 		} else {
-			cmbackends[bename], bErr = bes.RegisteredBackends[bename](authOpts, commonData.LogLevel)
-			if bErr != nil {
-				log.Fatalf("Backend register error: couldn't initialize %s backend with error %s.", bename, bErr)
-			} else {
-				log.Infof("Backend registered: %s", cmbackends[bename].GetName())
-			}
+			log.Infof("Backend registered: %s", cmbackends[bename].GetName())
 		}
+		//		}
 	}
 
 	if cache, ok := authOpts["cache"]; ok && strings.Replace(cache, " ", "", -1) == "true" {
@@ -385,33 +385,33 @@ func AuthUnpwdCheck(username, password string) bool {
 		validPrefix, bename := CheckPrefix(username)
 		if validPrefix {
 
-			if bename == "plugin" {
-				authenticated = CheckPluginAuth(username, password)
-			} else {
+			//			if bename == "plugin" {
+			//				authenticated = CheckPluginAuth(username, password)
+			//			} else {
 
-				var backend = commonData.Backends[bename]
+			var backend = commonData.Backends[bename]
 
-				if backend.GetUser(username, password) {
-					authenticated = true
-					log.Debugf("user %s authenticated with backend %s", username, backend.GetName())
-				}
-
+			if backend.GetUser(username, password) {
+				authenticated = true
+				log.Debugf("user %s authenticated with backend %s", username, backend.GetName())
 			}
+
+			//}
 
 		} else {
 			//If there's no valid prefix, check all backends.
 			authenticated = CheckBackendsAuth(username, password)
 			//If not authenticated, check for a present plugin
-			if !authenticated {
-				authenticated = CheckPluginAuth(username, password)
-			}
+			//			if !authenticated {
+			//				authenticated = CheckPluginAuth(username, password)
+			//			}
 		}
 	} else {
 		authenticated = CheckBackendsAuth(username, password)
 		//If not authenticated, check for a present plugin
-		if !authenticated {
-			authenticated = CheckPluginAuth(username, password)
-		}
+		//		if !authenticated {
+		//			authenticated = CheckPluginAuth(username, password)
+		//		}
 	}
 
 	if commonData.UseCache {
@@ -447,44 +447,44 @@ func AuthAclCheck(clientid, username, topic string, acc int) bool {
 		validPrefix, bename := CheckPrefix(username)
 		if validPrefix {
 
-			if bename == "plugin" {
+			//			if bename == "plugin" {
+			//
+			//				aclCheck = CheckPluginAcl(username, topic, clientid, acc)
+			//
+			//			} else {
 
-				aclCheck = CheckPluginAcl(username, topic, clientid, acc)
+			var backend = commonData.Backends[bename]
 
-			} else {
+			log.Debugf("Superuser check with backend %s", backend.GetName())
+			if backend.GetSuperuser(username) {
+				log.Debugf("superuser %s acl authenticated with backend %s", username, backend.GetName())
+				aclCheck = true
+			}
 
-				var backend = commonData.Backends[bename]
-
-				log.Debugf("Superuser check with backend %s", backend.GetName())
-				if backend.GetSuperuser(username) {
-					log.Debugf("superuser %s acl authenticated with backend %s", username, backend.GetName())
+			//If not superuser, check acl.
+			if !aclCheck {
+				log.Debugf("Acl check with backend %s", backend.GetName())
+				if backend.CheckAcl(username, topic, clientid, int32(acc)) {
+					log.Debugf("user %s acl authenticated with backend %s", username, backend.GetName())
 					aclCheck = true
 				}
-
-				//If not superuser, check acl.
-				if !aclCheck {
-					log.Debugf("Acl check with backend %s", backend.GetName())
-					if backend.CheckAcl(username, topic, clientid, int32(acc)) {
-						log.Debugf("user %s acl authenticated with backend %s", username, backend.GetName())
-						aclCheck = true
-					}
-				}
 			}
+			//			}
 
 		} else {
 			//If there's no valid prefix, check all backends.
 			aclCheck = CheckBackendsAcl(username, topic, clientid, acc)
 			//If acl hasn't passed, check for plugin.
-			if !aclCheck {
-				aclCheck = CheckPluginAcl(username, topic, clientid, acc)
-			}
+			//			if !aclCheck {
+			//				aclCheck = CheckPluginAcl(username, topic, clientid, acc)
+			//			}
 		}
 	} else {
 		aclCheck = CheckBackendsAcl(username, topic, clientid, acc)
 		//If acl hasn't passed, check for plugin.
-		if !aclCheck {
-			aclCheck = CheckPluginAcl(username, topic, clientid, acc)
-		}
+		//		if !aclCheck {
+		//			aclCheck = CheckPluginAcl(username, topic, clientid, acc)
+		//		}
 	}
 
 	if commonData.UseCache {
@@ -637,24 +637,24 @@ func CheckBackendsAcl(username, topic, clientid string, acc int) bool {
 
 }
 
-//CheckPluginAuth checks that the plugin is not nil and returns the plugins auth response.
-func CheckPluginAuth(username, password string) bool {
-	if commonData.Plugin != nil {
-		return commonData.PGetUser(username, password)
-	}
-	return false
-}
-
-//CheckPluginAcl checks that the plugin is not nil and returns the superuser/acl response.
-func CheckPluginAcl(username, topic, clientid string, acc int) bool {
-	if commonData.Plugin != nil {
-		aclCheck := commonData.PGetSuperuser(username)
-		if !aclCheck {
-			aclCheck = commonData.PCheckAcl(username, topic, clientid, acc)
-		}
-	}
-	return false
-}
+////CheckPluginAuth checks that the plugin is not nil and returns the plugins auth response.
+//func CheckPluginAuth(username, password string) bool {
+//	if commonData.Plugin != nil {
+//		return commonData.PGetUser(username, password)
+//	}
+//	return false
+//}
+//
+////CheckPluginAcl checks that the plugin is not nil and returns the superuser/acl response.
+//func CheckPluginAcl(username, topic, clientid string, acc int) bool {
+//	if commonData.Plugin != nil {
+//		aclCheck := commonData.PGetSuperuser(username)
+//		if !aclCheck {
+//			aclCheck = commonData.PCheckAcl(username, topic, clientid, acc)
+//		}
+//	}
+//	return false
+//}
 
 //export AuthPluginCleanup
 func AuthPluginCleanup() {
@@ -670,18 +670,15 @@ func AuthPluginCleanup() {
 		v.Halt()
 	}
 
-	if commonData.Plugin != nil {
-		commonData.PHalt()
-	}
+	//	if commonData.Plugin != nil {
+	//		commonData.PHalt()
+	//	}
 }
 
 //export AuthReload
 func AuthReload() {
 	log.Info("Reloading.")
 	for _, bename := range backends {
-		if bename == "plugin" {
-			continue
-		}
 		var backend = commonData.Backends[bename]
 		log.Infof("- Reloading %s", backend.GetName())
 		backend.Reload()
