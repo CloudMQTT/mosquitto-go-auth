@@ -701,12 +701,12 @@ func AuthLogWarn(message string) {
 
 //export AuthLogError
 func AuthLogError(message string) {
-	log.Warn(message)
+	log.Error(message)
 }
 
 //export AuthLogDebug
 func AuthLogDebug(message string) {
-	log.Warn(message)
+	log.Debug(message)
 }
 
 func main() {}
